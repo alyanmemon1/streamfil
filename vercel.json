@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Streamfil — Find Your People</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --pink: #FF0080;
+  --pink-dark: #cc0066;
+  --black: #080808;
+  --surface: #131313;
+  --surface2: #1a1a1a;
+  --border: #242424;
+  --text: #ffffff;
+  --muted: #888;
+  --dim: #444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body { height: 100%; background: var(--black); color: var(--text); font-family: 'DM Sans', sans-serif; overflow: hidden; }
+#app { height: 100vh; display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; background: var(--black); position: relative; }
+.screen { display: none; flex-direction: column; height: 100%; }
+.screen.active { display: flex; }
+
+/* SPLASH */
+#splash { align-items: center; justify-content: center; padding: 48px 32px; gap: 0; }
+.logo-big { font-family: 'Syne', sans-serif; font-size: 52px; font-weight: 800; color: var(--pink); letter-spacing: -3px; line-height: 1; }
+.tagline { font-size: 11px; color: var(--dim); letter-spacing: 4px; text-transform: uppercase; margin-top: 8px; margin-bottom: 52px; }
+.splash-desc { font-size: 15px; color: var(--muted); text-align: center; line-height: 1.8; margin-bottom: 52px; max-width: 280px; }
+.btn { width: 100%; padding: 15px 24px; border-radius: 50px; font-size: 15px; font-weight: 500; font-family: 'DM Sans', sans-serif; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s, opacity 0.15s; margin-bottom: 12px; }
+.btn:active { transform: scale(0.97); }
+.btn-spotify { background: #1DB954; color: #fff; }
+.btn-outline { background: none; border: 0.5px solid var(--border); color: var(--muted); }
+.btn-pink { background: var(--pink); color: #fff; }
+.privacy { font-size: 11px; color: var(--dim); text-align: center; margin-top: 20px; line-height: 1.6; }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 10px; flex-shrink: 0; }
+.logo { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--pink); letter-spacing: -1px; }
+.live-badge { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pink); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* SCROLL */
+.scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 24px; }
+.scroll::-webkit-scrollbar { display: none; }
+
+/* NOW PLAYING BAR */
+.now-playing { margin: 4px 16px 0; background: var(--surface); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; border: 0.5px solid var(--border); }
+.wave { display: flex; align-items: flex-end; gap: 2px; height: 18px; flex-shrink: 0; }
+.wave span { width: 3px; background: var(--pink); border-radius: 2px; animation: wave 0.9s ease-in-out infinite; }
+.wave span:nth-child(2){animation-delay:.12s}.wave span:nth-child(3){animation-delay:.24s}.wave span:nth-child(4){animation-delay:.36s}
+@keyframes wave{0%,100%{height:3px}50%{height:16px}}
+.np-info { flex: 1; min-width: 0; }
+.np-track { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-artist { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.np-icon { color: var(--pink); font-size: 18px; flex-shrink: 0; }
+
+/* SECTION */
+.section-label { font-size: 10px; color: var(--dim); letter-spacing: 2.5px; text-transform: uppercase; padding: 18px 20px 8px; }
+
+/* NEARBY CARDS */
+.card { margin: 6px 16px; background: var(--surface); border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; border: 0.5px solid var(--border); cursor: pointer; transition: border-color 0.2s; }
+.card.match { border-color: var(--pink); }
+.card:active { opacity: 0.8; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+.card-info { flex: 1; min-width: 0; }
+.card-name { font-size: 14px; font-weight: 500; }
+.card-song { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-dist { font-size: 11px; color: var(--dim); margin-top: 3px; }
+.match-pill { background: var(--pink); color: #fff; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; flex-shrink: 0; }
+
+/* COMMUNITY */
+.comm-card { margin: 6px 16px; background: var(--surface); border-radius: 14px; padding: 16px; border: 0.5px solid var(--border); }
+.comm-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.comm-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.comm-name { font-size: 14px; font-weight: 500; }
+.comm-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.comm-foot { display: flex; align-items: center; }
+.members { display: flex; }
+.member-av { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 600; margin-left: -7px; }
+.member-av:first-child { margin-left: 0; }
+.join-btn { margin-left: auto; background: none; border: 0.5px solid var(--pink); color: var(--pink); font-size: 12px; font-family: 'DM Sans', sans-serif; padding: 5px 16px; border-radius: 20px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.join-btn.joined { background: var(--pink); color: #fff; }
+
+/* NOTIFICATIONS */
+.notif { margin: 6px 16px; background: var(--surface); border-radius: 14px; padding: 14px; border-left: 3px solid var(--pink); }
+.notif-title { font-size: 13px; font-weight: 500; }
+.notif-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.notif-time { font-size: 11px; color: var(--dim); margin-top: 5px; }
+
+/* PROFILE */
+.profile-top { display: flex; flex-direction: column; align-items: center; padding: 28px 20px 20px; gap: 8px; }
+.profile-av { width: 76px; height: 76px; border-radius: 50%; background: var(--pink); display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; }
+.profile-name { font-size: 18px; font-weight: 500; }
+.profile-loc { font-size: 12px; color: var(--muted); }
+.stats { display: flex; justify-content: space-around; padding: 16px 20px; border-top: 0.5px solid var(--border); border-bottom: 0.5px solid var(--border); margin: 0 16px; border-radius: 14px; background: var(--surface); }
+.stat { text-align: center; }
+.stat-n { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: var(--pink); }
+.stat-l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.artist-row { display: flex; align-items: center; gap: 12px; padding: 11px 20px; border-bottom: 0.5px solid var(--border); }
+.artist-rank { font-size: 12px; color: var(--dim); width: 16px; }
+.artist-thumb { width: 38px; height: 38px; border-radius: 8px; object-fit: cover; }
+.artist-thumb-placeholder { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.artist-name-text { font-size: 14px; font-weight: 400; flex: 1; }
+.artist-plays { font-size: 11px; color: var(--dim); }
+
+/* NAV */
+.nav { display: flex; justify-content: space-around; padding: 10px 0 max(12px, env(safe-area-inset-bottom)); border-top: 0.5px solid var(--border); flex-shrink: 0; background: var(--black); }
+.nav-btn { background: none; border: none; color: var(--dim); font-size: 10px; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 20px; transition: color 0.15s; }
+.nav-btn svg { width: 22px; height: 22px; }
+.nav-btn.active { color: var(--pink); }
+
+/* LOADING */
+#loading { align-items: center; justify-content: center; gap: 16px; }
+.spinner { width: 36px; height: 36px; border: 2px solid var(--border); border-top-color: var(--pink); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 14px; color: var(--muted); }
+
+/* TOAST */
+#toast { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--surface2); border: 0.5px solid var(--border); color: var(--text); font-size: 13px; padding: 10px 20px; border-radius: 30px; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 100; }
+#toast.show { opacity: 1; }
+
+/* EMPTY STATE */
+.empty { text-align: center; padding: 48px 32px; color: var(--muted); font-size: 14px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SPLASH -->
+  <div class="screen active" id="splash">
+    <div style="text-align:center;margin-bottom:52px">
+      <div class="logo-big">streamfil</div>
+      <div class="tagline">find your people</div>
+    </div>
+    <p class="splash-desc">Discover people nearby listening to the same music as you — right now.</p>
+    <button class="btn btn-spotify" onclick="loginSpotify()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.622.622 0 11-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 01.207.857zm1.223-2.72a.78.78 0 01-1.072.257c-2.687-1.652-6.785-2.131-9.965-1.166a.78.78 0 01-.973-.519.781.781 0 01.52-.972c3.632-1.102 8.147-.568 11.234 1.328a.78.78 0 01.256 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.937.937 0 11-.543-1.794c3.563-1.081 9.484-.872 13.22 1.35a.937.937 0 01-.86 1.603z"/></svg>
+      Continue with Spotify
+    </button>
+    <button class="btn btn-outline" onclick="demoMode()">Explore demo</button>
+    <p class="privacy">We only read your music taste and location.<br>We never post or modify anything.</p>
+  </div>
+
+  <!-- LOADING -->
+  <div class="screen" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Connecting to Spotify...</div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="home">
+    <div class="topbar">
+      <div class="logo">streamfil</div>
+      <div class="live-badge"><div class="live-dot"></div><span id="location-label">Locating...</span></div>
+    </div>
+    <div class="scroll">
+      <div class="now-playing" id="now-playing-bar" style="display:none">
+        <div class="wave"><span></span><span></span><span></span><span></span></div>
+        <div class="np-info">
+          <div class="np-track" id="np-track">—</div>
+          <div class="np-artist" id="np-artist">—</div>
+        </div>
+        <svg class="np-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 17.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
+      </div>
+      <div class="section-label">Nearby listeners</div>
+      <div id="nearby-list"><div class="empty">Searching for nearby listeners...</div></div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn active" onclick="showTab('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>
+        Home
+      </button>
+      <button class="nav-btn" onclick="showTab('community')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
+        Community
+      </button>
+      <button class="nav-btn" onclick="showTab('activity')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
+        Activity
+      </button>
+      <button class="nav-btn" onclick="showTab('profile')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+        Profile
+      </button>
+    </div>
+  </div>
+
+  <!-- COMMUNITY -->
+  <div class="screen" id="community">
+    <div class="topbar"><div class="logo">streamfil</div><span style="font-size:12px;color:var(--muted)" id="community-area">Your area</span></div>
+    <div class="scroll">
+      <div class="section-label">Your communities</div>
+      <div id="community-list"></div>
+      <div class="section-label">Suggested</div>
+      <div id="suggested-list"></div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn" onclick="showTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>Home</button>
+      <button class="nav-btn active" onclick="showTab('community')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>Community</button>
+      <button class="nav-btn" onclick="showTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>Activity</button>
+      <button class="nav-btn" onclick="showTab('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- ACTIVITY -->
+  <div class="screen" id="activity">
+    <div class="topbar"><div class="logo">streamfil</div><div class="live-badge"><div class="live-dot"></div><span>Live</span></div></div>
+    <div class="scroll">
+      <div class="section-label">Activity</div>
+      <div id="activity-list"></div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn" onclick="showTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>Home</button>
+      <button class="nav-btn" onclick="showTab('community')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>Community</button>
+      <button class="nav-btn active" onclick="showTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>Activity</button>
+      <button class="nav-btn" onclick="showTab('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="screen" id="profile">
+    <div class="scroll">
+      <div class="profile-top">
+        <div class="profile-av" id="profile-av">?</div>
+        <div class="profile-name" id="profile-name">Loading...</div>
+        <div class="profile-loc" id="profile-loc">—</div>
+      </div>
+      <div class="stats" style="margin-bottom:16px">
+        <div class="stat"><div class="stat-n" id="stat-connections">—</div><div class="stat-l">Connections</div></div>
+        <div class="stat"><div class="stat-n" id="stat-communities">—</div><div class="stat-l">Communities</div></div>
+        <div class="stat"><div class="stat-n" id="stat-matches">—</div><div class="stat-l">Matches</div></div>
+      </div>
+      <div class="section-label">Your top artists</div>
+      <div id="top-artists-list"></div>
+      <div style="padding:20px 20px 0">
+        <button class="btn btn-outline" onclick="logout()" style="font-size:13px;padding:12px">Sign out</button>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="nav-btn" onclick="showTab('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"/></svg>Home</button>
+      <button class="nav-btn" onclick="showTab('community')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>Community</button>
+      <button class="nav-btn" onclick="showTab('activity')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>Activity</button>
+      <button class="nav-btn active" onclick="showTab('profile')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>Profile</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+const CLIENT_ID = '85ee361a8a8e4bbe89e13647c5a5234e';
+const REDIRECT_URI = window.location.origin + window.location.pathname;
+const SCOPES = 'user-read-currently-playing user-top-read user-read-recently-played';
+
+let state = {
+  token: null,
+  user: null,
+  topArtists: [],
+  currentTrack: null,
+  location: null,
+  isDemo: false,
+  joinedCommunities: new Set(['kaavish-bay'])
+};
+
+const colors = [
+  {bg:'#2a0a14',fg:'#FF0080'},{bg:'#0a1a2a',fg:'#378ADD'},
+  {bg:'#0a2a15',fg:'#1D9E75'},{bg:'#1a1a0a',fg:'#BA7517'},
+  {bg:'#1a0a2a',fg:'#9333EA'},{bg:'#2a1a0a',fg:'#E24B4A'}
+];
+
+function getColor(i){ return colors[i % colors.length]; }
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showTab(tab){
+  show(tab);
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll(`[onclick="showTab('${tab}')"]`).forEach(b=>b.classList.add('active'));
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function generateCodeVerifier(){
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return btoa(String.fromCharCode(...arr)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function generateCodeChallenge(verifier){
+  const enc = new TextEncoder().encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', enc);
+  return btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+
+async function loginSpotify(){
+  const verifier = generateCodeVerifier();
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('code_verifier', verifier);
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge
+  });
+  window.location = 'https://accounts.spotify.com/authorize?' + params;
+}
+
+async function exchangeToken(code){
+  const verifier = sessionStorage.getItem('code_verifier');
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({
+      client_id: CLIENT_ID,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: verifier
+    })
+  });
+  return res.json();
+}
+
+async function spotifyGet(endpoint){
+  const res = await fetch('https://api.spotify.com/v1' + endpoint, {
+    headers: { Authorization: 'Bearer ' + state.token }
+  });
+  if(!res.ok) return null;
+  return res.json();
+}
+
+function demoMode(){
+  state.isDemo = true;
+  state.user = { display_name: 'Alyan', id: 'alyan' };
+  state.topArtists = [
+    { name: 'Kaavish', images:[{url:''}] },
+    { name: 'AR Rahman', images:[{url:''}] },
+    { name: 'Atif Aslam', images:[{url:''}] },
+    { name: 'Coke Studio', images:[{url:''}] },
+    { name: 'Nusrat Fateh Ali Khan', images:[{url:''}] }
+  ];
+  state.currentTrack = { name: 'Hum Dekhain Gey', artist: 'Kaavish' };
+  state.location = { city: 'San Ramon, CA', lat: 37.78, lng: -121.98 };
+  loadApp();
+}
+
+async function loadApp(){
+  show('loading');
+  document.getElementById('loading-text').textContent = 'Loading your music...';
+
+  if(!state.isDemo){
+    const [me, top, current] = await Promise.all([
+      spotifyGet('/me'),
+      spotifyGet('/me/top/artists?limit=5&time_range=medium_term'),
+      spotifyGet('/me/player/currently-playing')
+    ]);
+    state.user = me;
+    state.topArtists = top?.items || [];
+    if(current?.item){
+      state.currentTrack = { name: current.item.name, artist: current.item.artists[0].name };
+    } else {
+      const recent = await spotifyGet('/me/player/recently-played?limit=1');
+      if(recent?.items?.length){
+        state.currentTrack = { name: recent.items[0].track.name, artist: recent.items[0].track.artists[0].name };
+      }
+    }
+  }
+
+  document.getElementById('loading-text').textContent = 'Finding your location...';
+  await getLocation();
+  buildProfile();
+  buildNearby();
+  buildCommunity();
+  buildActivity();
+  showTab('home');
+}
+
+function getLocation(){
+  return new Promise(resolve => {
+    if(state.isDemo){ resolve(); return; }
+    if(!navigator.geolocation){ state.location = { city: 'Your area', lat: 0, lng: 0 }; resolve(); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        state.location = { city: 'Your area', lat: pos.coords.latitude, lng: pos.coords.longitude };
+        reverseGeocode(pos.coords.latitude, pos.coords.longitude).then(city => {
+          state.location.city = city;
+          resolve();
+        });
+      },
+      () => { state.location = { city: 'Your area', lat: 0, lng: 0 }; resolve(); },
+      { timeout: 5000 }
+    );
+  });
+}
+
+async function reverseGeocode(lat, lng){
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+    const d = await res.json();
+    return d.address.city || d.address.town || d.address.suburb || 'Your area';
+  } catch { return 'Your area'; }
+}
+
+function buildProfile(){
+  const name = state.user?.display_name || 'You';
+  const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('profile-av').textContent = initials;
+  document.getElementById('profile-name').textContent = name;
+  document.getElementById('profile-loc').textContent = (state.location?.city || 'Your area') + ' · Member since 2026';
+  document.getElementById('stat-connections').textContent = Math.floor(Math.random()*40)+10;
+  document.getElementById('stat-communities').textContent = state.joinedCommunities.size;
+  document.getElementById('stat-matches').textContent = Math.floor(Math.random()*80)+20;
+
+  const list = document.getElementById('top-artists-list');
+  const emojis = ['🎵','🎸','🎤','🎧','🎼'];
+  list.innerHTML = state.topArtists.slice(0,5).map((a,i)=>`
+    <div class="artist-row">
+      <div class="artist-rank">${i+1}</div>
+      <div class="artist-thumb-placeholder" style="background:${getColor(i).bg}">${emojis[i]}</div>
+      <div class="artist-name-text">${a.name}</div>
+      <div class="artist-plays">${Math.floor(Math.random()*300)+50} plays</div>
+    </div>`).join('');
+}
+
+function buildNearby(){
+  const city = state.location?.city || 'Your area';
+  document.getElementById('location-label').textContent = city;
+
+  if(state.currentTrack){
+    document.getElementById('now-playing-bar').style.display = 'flex';
+    document.getElementById('np-track').textContent = state.currentTrack.name;
+    document.getElementById('np-artist').textContent = state.currentTrack.artist;
+  }
+
+  const myArtist = state.topArtists[0]?.name || 'your music';
+  const nearby = generateNearbyUsers(myArtist, city);
+  const list = document.getElementById('nearby-list');
+  list.innerHTML = nearby.map((u,i)=>`
+    <div class="card ${u.match?'match':''}" onclick="toast('Coming soon: connect with ${u.name}')">
+      <div class="avatar" style="background:${getColor(i).bg};color:${getColor(i).fg}">${u.initials}</div>
+      <div class="card-info">
+        <div class="card-name">${u.name}</div>
+        <div class="card-song">${u.artist} — ${u.track}</div>
+        <div class="card-dist">${u.dist} mi away · ${u.area}</div>
+      </div>
+      ${u.match?'<div class="match-pill">Match</div>':''}
+    </div>`).join('');
+}
+
+function generateNearbyUsers(myArtist, city){
+  const areas = city !== 'Your area'
+    ? [city, city + ' area', 'nearby']
+    : ['Nearby','Area','Local'];
+  const users = [
+    { name:'Ayesha K.', initials:'AK', artist: myArtist, track:'Same vibe', dist:0.8, match:true },
+    { name:'Marco R.', initials:'MR', artist:'Bad Bunny', track:'Titi Me Pregunto', dist:1.2, match:false },
+    { name:'Sunita P.', initials:'SP', artist:'AR Rahman', track:'Jai Ho', dist:2.1, match:false },
+    { name:'James L.', initials:'JL', artist:'Drake', track:"God's Plan", dist:2.4, match:false },
+    { name:'Leila H.', initials:'LH', artist: myArtist, track:'Top track', dist:3.1, match:true },
+  ];
+  return users.map((u,i)=>({...u, area: areas[i % areas.length]}));
+}
+
+function buildCommunity(){
+  const myArtist = state.topArtists[0]?.name || 'Music';
+  const city = state.location?.city || 'Your area';
+  document.getElementById('community-area').textContent = city;
+
+  const communities = [
+    { id:'kaavish-bay', name: myArtist + ' fans', area: city, members:47, active:3, icon:'🎵', bg:'var(--pink)' },
+    { id:'desi-east', name:'Desi music lovers', area: city, members:182, active:12, icon:'🎸', bg:'#378ADD' },
+  ];
+  const suggested = [
+    { id:'world-tri', name:'World music', area: city + ' area', members:94, active:5, icon:'🌍', bg:'#1D9E75' },
+    { id:'local-scene', name:'Local music scene', area: city, members:63, active:8, icon:'🎤', bg:'#BA7517' },
+  ];
+
+  document.getElementById('community-list').innerHTML = communities.map(c=>communityCard(c)).join('');
+  document.getElementById('suggested-list').innerHTML = suggested.map(c=>communityCard(c)).join('');
+}
+
+function communityCard(c){
+  const joined = state.joinedCommunities.has(c.id);
+  return `<div class="comm-card">
+    <div class="comm-head">
+      <div class="comm-icon" style="background:${c.bg}">${c.icon}</div>
+      <div>
+        <div class="comm-name">${c.name} — ${c.area}</div>
+        <div class="comm-meta">${c.members} members · ${c.active} active now</div>
+      </div>
+    </div>
+    <div class="comm-foot">
+      <div class="members">
+        ${['A','B','C'].map((l,i)=>`<div class="member-av" style="background:${getColor(i).bg};color:${getColor(i).fg}">${l}</div>`).join('')}
+        <div class="member-av" style="background:#222;color:#888">+${c.members-3}</div>
+      </div>
+      <button class="join-btn ${joined?'joined':''}" onclick="toggleJoin('${c.id}',this)">${joined?'Joined':'Join'}</button>
+    </div>
+  </div>`;
+}
+
+function toggleJoin(id, btn){
+  if(state.joinedCommunities.has(id)){
+    state.joinedCommunities.delete(id);
+    btn.textContent = 'Join';
+    btn.classList.remove('joined');
+    toast('Left community');
+  } else {
+    state.joinedCommunities.add(id);
+    btn.textContent = 'Joined';
+    btn.classList.add('joined');
+    toast('Joined community!');
+  }
+  document.getElementById('stat-communities').textContent = state.joinedCommunities.size;
+}
+
+function buildActivity(){
+  const myArtist = state.topArtists[0]?.name || 'your artist';
+  const track = state.currentTrack?.name || 'your song';
+  const activities = [
+    { title:`Ayesha K. is listening to the same song as you`, sub:`${myArtist} — ${track} · 0.8 mi away`, time:'Just now', color:'var(--pink)' },
+    { title:`3 people near you love ${myArtist}`, sub:'A community just formed nearby', time:'12 min ago', color:'#378ADD' },
+    { title:`Sunita P. joined Desi music lovers`, sub:`You both like AR Rahman and ${myArtist}`, time:'1 hr ago', color:'#1D9E75' },
+    { title:'New member in your community', sub:'Omar H. joined · 1.5 mi from you', time:'3 hrs ago', color:'#BA7517' },
+  ];
+  document.getElementById('activity-list').innerHTML = activities.map(a=>`
+    <div class="notif" style="border-left-color:${a.color}">
+      <div class="notif-title">${a.title}</div>
+      <div class="notif-sub">${a.sub}</div>
+      <div class="notif-time">${a.time}</div>
+    </div>`).join('');
+}
+
+function logout(){
+  state = { token:null, user:null, topArtists:[], currentTrack:null, location:null, isDemo:false, joinedCommunities: new Set(['kaavish-bay']) };
+  sessionStorage.clear();
+  show('splash');
+}
+
+async function init(){
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if(code){
+    window.history.replaceState({}, '', window.location.pathname);
+    show('loading');
+    document.getElementById('loading-text').textContent = 'Connecting to Spotify...';
+    const data = await exchangeToken(code);
+    if(data.access_token){
+      state.token = data.access_token;
+      await loadApp();
+    } else {
+      toast('Login failed. Try again.');
+      show('splash');
+    }
+  }
+}
+
+init();
+</script>
+</body>
+</html>
