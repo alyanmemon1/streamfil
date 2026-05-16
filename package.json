@@ -1,0 +1,8 @@
+{
+  "name": "streamfil",
+  "version": "1.0.0",
+  "description": "Real-time nearby listener app powered by Spotify",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
