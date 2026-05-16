@@ -384,7 +384,7 @@ async function loadApp(){
   document.getElementById('loading-text').textContent = 'Finding your location...';
   await getLocation();
   buildProfile();
-  buildNearby();
+await   buildNearby();
   buildCommunity();
   buildActivity();
   showTab('home');
@@ -437,7 +437,7 @@ function buildProfile(){
     </div>`).join('');
 }
 
-function buildNearby(){
+async function buildNearby(){
   const city = state.location?.city || 'Your area';
   document.getElementById('location-label').textContent = city;
 
@@ -448,7 +448,40 @@ function buildNearby(){
   }
 
   const myArtist = state.topArtists[0]?.name || 'your music';
-  const nearby = generateNearbyUsers(myArtist, city);
+  // Post our data to Supabase
+  if(state.user && state.location && !state.isDemo){
+    fetch('/api/update-listener', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        spotify_id: state.user.id,
+        display_name: state.user.display_name,
+        track_name: state.currentTrack?.name || null,
+        artist_name: state.currentTrack?.artist || null,
+        album_art: state.currentTrack?.albumArt || null,
+        latitude: state.location.lat,
+        longitude: state.location.lng
+      })
+    }).catch(()=>{});
+  }
+  // Fetch real nearby listeners
+  let nearby = [];
+  if(state.location && !state.isDemo){
+    try {
+      const r = await fetch('/api/get-nearby?lat='+state.location.lat+'&lng='+state.location.lng+'&exclude_id='+(state.user?.id||''));
+      const d = await r.json();
+      nearby = (d.listeners||[]).map(u=>({
+        name: u.display_name || 'Listener',
+        initials: (u.display_name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase(),
+        artist: u.artist_name || '—',
+        track: u.track_name || '—',
+        dist: Math.round(u.distance*10)/10,
+        match: u.artist_name === myArtist,
+        area: 'Nearby'
+      }));
+    } catch(e){}
+  }
+  if(!nearby.length) nearby = generateNearbyUsers(myArtist, city);
   const list = document.getElementById('nearby-list');
   list.innerHTML = nearby.map((u,i)=>`
     <div class="card ${u.match?'match':''}" onclick="toast('Coming soon: connect with ${u.name}')">
