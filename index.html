@@ -365,7 +365,8 @@ async function loadApp(){
   document.getElementById('loading-text').textContent = 'Loading your music...';
 
   if(!state.isDemo){
-    const [me, top, current] = await Promise.all([
+    try {
+      const [me, top, current] = await Promise.all([
       spotifyGet('/me'),
       spotifyGet('/me/top/artists?limit=5&time_range=medium_term'),
       spotifyGet('/me/player/currently-playing')
@@ -380,8 +381,8 @@ async function loadApp(){
         state.currentTrack = { name: recent.items[0].track.name, artist: recent.items[0].track.artists[0].name };
       }
     }
-  }
-
+  } catch(e){ toast('Login error. Try again.'); show('splash'); }
+}
   document.getElementById('loading-text').textContent = 'Finding your location...';
   await getLocation();
   buildProfile();
