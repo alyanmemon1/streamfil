@@ -1,5 +1,4 @@
 const { createClient } = require('@supabase/supabase-js');
-
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_ANON_KEY
@@ -22,9 +21,13 @@ module.exports = async (req, res) => {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { lat, lng, exclude_id } = req.query;
+  const { lat, lng, exclude_id, radius_miles } = req.query;
+  const radiusMiles = parseFloat(radius_miles) || 50;
+  const radiusKm = radiusMiles * 1.60934;
 
-  if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'lat and lng are required' });
+  }
 
   const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
@@ -41,7 +44,7 @@ module.exports = async (req, res) => {
       ...listener,
       distance: haversineDistance(parseFloat(lat), parseFloat(lng), listener.latitude, listener.longitude)
     }))
-    .filter(l => l.distance <= 10)
+    .filter(l => l.distance <= radiusKm)
     .sort((a, b) => a.distance - b.distance)
     .slice(0, 20);
 
