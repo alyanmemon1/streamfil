@@ -70,6 +70,7 @@ body { height: 100%; background: var(--black); color: var(--text); font-family: 
 .card-info { flex: 1; min-width: 0; }
 .card-name { font-size: 14px; font-weight: 500; }
 .card-song { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-shared { font-size: 11px; color: var(--pink); margin-top: 3px; font-weight: 500; }
 .card-dist { font-size: 11px; color: var(--dim); margin-top: 3px; }
 .match-pill { background: var(--pink); color: #fff; font-size: 10px; font-weight: 600; padding: 3px 9px; border-radius: 20px; flex-shrink: 0; }
 
@@ -256,12 +257,15 @@ body { height: 100%; background: var(--black); color: var(--text); font-family: 
 <script>
 const CLIENT_ID = '85ee361a8a8e4bbe89e13647c5a5234e';
 const REDIRECT_URI = 'https://streamfil.com/callback';
-const SCOPES = 'user-read-currently-playing user-top-read user-read-recently-played';
+const SCOPES = 'user-read-currently-playing user-top-read user-read-recently-played user-library-read';
 
 let state = {
   token: null,
   user: null,
   topArtists: [],
+    topTracks: [],
+      genres: [],
+        tasteProfile: null,
   currentTrack: null,
   location: null,
   isDemo: false,
@@ -366,13 +370,22 @@ async function loadApp(){
 
   if(!state.isDemo){
     try {
-      const [me, top, current] = await Promise.all([
+      const [me, topArtistsData, topTracksData, current] = await Promise.all([
       spotifyGet('/me'),
-      spotifyGet('/me/top/artists?limit=5&time_range=medium_term'),
+      spotifyGet('/me/top/artists?limit=50&time_range=long_term'),
+        spotifyGet('/me/top/tracks?limit=50&time_range=long_term'),
       spotifyGet('/me/player/currently-playing')
     ]);
     state.user = me;
-    state.topArtists = top?.items || [];
+    state.topArtists = topArtistsData?.items || [];
+        state.topTracks = topTracksData?.items || [];
+        state.genres = [...new Set((state.topArtists).flatMap(a => a.genres || []))].slice(0, 20);
+        state.tasteProfile = {
+          artistIds: state.topArtists.map(a => a.id),
+          trackIds: state.topTracks.map(t => t.id),
+          artistNames: state.topArtists.map(a => a.name),
+          genres: state.genres
+        };
     if(current?.item){
       state.currentTrack = { name: current.item.name, artist: current.item.artists[0].name };
     } else {
@@ -439,6 +452,25 @@ function buildProfile(){
     </div>`).join('');
 }
 
+function computeMatch(myProfile, other) {
+  if (!myProfile || !other) return 0;
+  const myArtists = new Set(myProfile.artistNames || []);
+  const myTracks = new Set(myProfile.trackIds || []);
+  const myGenres = new Set(myProfile.genres || []);
+  const theirArtists = other.top_artists || [];
+  const theirTracks = other.top_tracks || [];
+  const theirGenres = other.genres || [];
+  if (!myArtists.size && !myTracks.size && !myGenres.size) return 0;
+  if (!theirArtists.length && !theirTracks.length && !theirGenres.length) return 0;
+  const sharedArtists = theirArtists.filter(a => myArtists.has(a)).length;
+  const sharedTracks = theirTracks.filter(t => myTracks.has(t)).length;
+  const sharedGenres = theirGenres.filter(g => myGenres.has(g)).length;
+  const artistScore = myArtists.size ? (sharedArtists / Math.max(myArtists.size, theirArtists.length)) * 50 : 0;
+  const trackScore = myTracks.size ? (sharedTracks / Math.max(myTracks.size, theirTracks.length)) * 30 : 0;
+  const genreScore = myGenres.size ? (sharedGenres / Math.max(myGenres.size, theirGenres.length)) * 20 : 0;
+  return Math.round(artistScore + trackScore + genreScore);
+}
+
 async function buildNearby(){
   const city = state.location?.city || 'Your area';
   document.getElementById('location-label').textContent = city;
@@ -462,7 +494,10 @@ async function buildNearby(){
         artist_name: state.currentTrack?.artist || null,
         album_art: state.currentTrack?.albumArt || null,
         latitude: state.location.lat,
-        longitude: state.location.lng
+        longitude: state.location.lng,
+                  top_artists: state.tasteProfile?.artistNames || [],
+                            top_tracks: state.tasteProfile?.trackIds || [],
+                                      genres: state.tasteProfile?.genres || []
       })
     }).catch(()=>{});
   }
@@ -478,7 +513,8 @@ async function buildNearby(){
         artist: u.artist_name || '—',
         track: u.track_name || '—',
                   dist: Math.round(u.distance * 0.621371 * 10) / 10,
-        match: u.artist_name === myArtist,
+        matchScore: computeMatch(state.tasteProfile, u),
+        sharedWith: (state.tasteProfile?.artistNames||[]).filter(a=>(u.top_artists||[]).includes(a)).slice(0,3),
         area: 'Nearby'
       }));
     } catch(e){}
@@ -486,14 +522,14 @@ async function buildNearby(){
   if(!nearby.length) nearby = generateNearbyUsers(myArtist, city);
   const list = document.getElementById('nearby-list');
   list.innerHTML = nearby.map((u,i)=>`
-    <div class="card ${u.match?'match':''}" onclick="toast('Coming soon: connect with ${u.name}')">
+    <div class=\"card ${u.matchScore>=50?'match':''}\" onclick=\"toast('Coming soon: connect with ${u.name}')\">
       <div class="avatar" style="background:${getColor(i).bg};color:${getColor(i).fg}">${u.initials}</div>
       <div class="card-info">
         <div class="card-name">${u.name}</div>
         <div class="card-song">${u.artist} — ${u.track}</div>
-        <div class="card-dist">${u.dist} mi away · ${u.area}</div>
+        <div class=\"card-dist\">${u.dist} mi away · ${u.area}</div>${u.sharedWith?.length?`<div class=\"card-shared\">Both love: ${u.sharedWith.join(', ')}</div>`:''}
       </div>
-      ${u.match?'<div class="match-pill">Match</div>':''}
+      ${u.matchScore>0?`<div class=\"match-pill\">${u.matchScore}% match</div>`:''}
     </div>`).join('');
 }
 
